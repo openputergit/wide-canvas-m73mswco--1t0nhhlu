@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STEM Education Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Roboto+Flex:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        @property --rotate {
+            syntax: "<angle>";
+            initial-value: 132deg;
+            inherits: false;
+        }
+        
+        :root {
+            --card-height: 200px;
+            --card-width: calc(var(--card-height) / 1.5);
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .card {
+            background: #191c29;
+            position: relative;
+            border-radius: 6px;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+
+        .card::before {
+            content: "";
+            width: 104%;
+            height: 102%;
+            border-radius: 8px;
+            background-image: linear-gradient(var(--rotate), #4285F4, #BB86FC 43%, #4285F4);
+            position: absolute;
+            z-index: -1;
+            top: -1%;
+            left: -2%;
+            animation: spin 2.5s linear infinite;
+        }
+
+        .card::after {
+            position: absolute;
+            content: "";
+            top: calc(var(--card-height) / 6);
+            left: 0;
+            right: 0;
+            z-index: -1;
+            height: 100%;
+            width: 100%;
+            margin: 0 auto;
+            transform: scale(0.8);
+            filter: blur(calc(var(--card-height) / 6));
+            background-image: linear-gradient(var(--rotate), #4285F4, #BB86FC 43%, #4285F4);
+            opacity: 1;
+            transition: opacity .5s;
+            animation: spin 2.5s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                --rotate: 0deg;
+            }
+            100% {
+                --rotate: 360deg;
+            }
+        }
+
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+
+        @keyframes floating {
+            0% { transform: translate(0, 0px); }
+            50% { transform: translate(0, 15px); }
+            100% { transform: translate(0, -0px); }
+        }
+
+        .high-contrast {
+            filter: contrast(150%);
+        }
+
+        .dyslexic-font {
+            font-family: 'OpenDyslexic', 'Comic Sans MS', cursive;
+        }
+
+        #background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .chat-widget {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-[#0a0c1b] to-[#1a1c2b] text-white min-h-screen" x-data="dashboard()">
+    <!-- Navigation -->
+    <nav class="glass-effect fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <div class="text-2xl font-bold text-[#4285F4]">STEM<span class="text-[#BB86FC]">Lab</span></div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-[#4285F4]/20 transition-all">Home</a>
+                        <a href="#" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-[#4285F4]/20 transition-all">Student Progress</a>
+                        <a href="#" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-[#4285F4]/20 transition-all">Assignments</a>
+                        <a href="#" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-[#4285F4]/20 transition-all">AR/VR Lab</a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button @click="toggleAccessibility" class="p-2 rounded-full hover:bg-[#4285F4]/20">
+                        <i class="bi bi-eye text-xl"></i>
+                    </button>
+                    <div class="relative">
+                        <button @click="profileOpen = !profileOpen" class="flex text-sm rounded-full focus:outline-none">
+                            <img class="h-8 w-8 rounded-full" src="https://api.dicebear.com/6.x/avataaars/svg?seed=Felix" alt="Profile">
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="pt-20 px-4 sm:px-6 lg:px-8">
+        <!-- Hero Section -->
+        <div class="glass-effect rounded-lg p-8 mb-8 text-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-[#4285F4]/20 to-[#BB86FC]/20"></div>
+            <h1 class="text-4xl md:text-6xl font-bold mb-4 relative z-10">Welcome to STEM<span class="text-[#BB86FC]">Lab</span></h1>
+            <p class="text-xl mb-6 relative z-10">Empowering Educators with Real-Time Insights</p>
+            <button class="bg-gradient-to-r from-[#4285F4] to-[#BB86FC] px-8 py-3 rounded-full text-white font-bold hover:shadow-lg hover:scale-105 transition-all duration-300 relative z-10">
+                Start Teaching
+            </button>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+            <!-- Student Progress Card -->
+            <div class="card glass-effect p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-4">Student Progress</h3>
+                <canvas id="progressChart" class="w-full max-w-[300px] mx-auto"></canvas>
+            </div>
+
+            <!-- Recent Assignments Card -->
+            <div class="card glass-effect p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-4">Recent Assignments</h3>
+                <div class="space-y-4">
+                    <template x-for="assignment in assignments" :key="assignment.id">
+                        <div class="flex items-center justify-between p-3 rounded-lg" :class="{'bg-red-500/20': assignment.overdue, 'bg-green-500/20': !assignment.overdue}">
+                            <div>
+                                <p x-text="assignment.name" class="font-medium"></p>
+                                <p x-text="assignment.dueDate" class="text-sm opacity-75"></p>
+                            </div>
+                            <span x-text="assignment.completion" class="text-sm font-bold"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- AR/VR Engagement Card -->
+            <div class="card glass-effect p-6 rounded-lg">
+                <h3 class="text-xl font-bold mb-4">AR/VR Engagement</h3>
+                <canvas id="engagementChart" class="w-full max-w-[300px] mx-auto"></canvas>
+            </div>
+        </div>
+
+        <!-- Voice Command Button -->
+        <button @click="startVoiceCommand" class="fixed bottom-24 right-8 bg-gradient-to-r from-[#4285F4] to-[#BB86FC] p-4 rounded-full shadow-lg hover:shadow-2xl transition-all duration-300">
+            <i class="bi bi-mic text-2xl" :class="{'text-red-500': isRecording}"></i>
+        </button>
+
+        <!-- AI Chat Widget -->
+        <div class="fixed bottom-8 right-8 chat-widget">
+            <button @click="toggleChat" class="bg-gradient-to-r from-[#4285F4] to-[#BB86FC] p-4 rounded-full shadow-lg hover:shadow-2xl transition-all duration-300">
+                <i class="bi bi-chat-dots text-2xl"></i>
+            </button>
+            <div x-show="chatOpen" class="absolute bottom-16 right-0 w-80 glass-effect rounded-lg p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-bold">Gemini AI Assistant</h4>
+                    <button @click="toggleChat" class="text-gray-400 hover:text-white">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="h-64 overflow-y-auto mb-4 space-y-2">
+                    <template x-for="message in chatMessages" :key="message.id">
+                        <div :class="{'text-right': message.sender === 'user'}" class="mb-2">
+                            <div :class="{'bg-[#4285F4]/20': message.sender === 'user', 'bg-[#BB86FC]/20': message.sender === 'ai'}" 
+                                 class="inline-block rounded-lg px-4 py-2 max-w-[80%]">
+                                <p x-text="message.text"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" x-model="newMessage" @keyup.enter="sendMessage" 
+                           class="flex-1 bg-white/10 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#4285F4]"
+                           placeholder="Type your message...">
+                    <button @click="sendMessage" class="bg-[#4285F4] px-4 rounded hover:bg-[#4285F4]/80">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function dashboard() {
+            return {
+                isAccessible: false,
+                profileOpen: false,
+                chatOpen: false,
+                isRecording: false,
+                newMessage: '',
+                chatMessages: [
+                    { id: 1, sender: 'ai', text: 'Hello! How can I assist you today?' }
+                ],
+                assignments: [
+                    { id: 1, name: 'Physics Lab Report', dueDate: 'Due Tomorrow', completion: '80%', overdue: false },
+                    { id: 2, name: 'Chemistry Quiz', dueDate: 'Overdue by 2 days', completion: '0%', overdue: true },
+                    { id: 3, name: 'Biology Project', dueDate: 'Due in 3 days', completion: '60%', overdue: false }
+                ],
+                init() {
+                    this.initCharts();
+                    this.initBackgroundAnimation();
+                },
+                toggleAccessibility() {
+                    this.isAccessible = !this.isAccessible;
+                    document.body.classList.toggle('high-contrast');
+                    document.body.classList.toggle('dyslexic-font');
+                },
+                toggleChat() {
+                    this.chatOpen = !this.chatOpen;
+                },
+                async sendMessage() {
+                    if (!this.newMessage.trim()) return;
+                    
+                    const userMessage = { id: Date.now(), sender: 'user', text: this.newMessage };
+                    this.chatMessages.push(userMessage);
+                    const messageToSend = this.newMessage;
+                    this.newMessage = '';
+
+                    // Simulate AI response
+                    setTimeout(() => {
+                        this.chatMessages.push({
+                            id: Date.now(),
+                            sender: 'ai',
+                            text: `I received your message: "${messageToSend}". How can I help further?`
+                        });
+                    }, 1000);
+                },
+                async startVoiceCommand() {
+                    if (!this.isRecording) {
+                        try {
+                            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                            this.isRecording = true;
+                            // Implement voice recognition logic here
+                            setTimeout(() => {
+                                this.isRecording = false;
+                                stream.getTracks().forEach(track => track.stop());
+                            }, 5000);
+                        } catch (err) {
+                            console.error('Error accessing microphone:', err);
+                        }
+                    } else {
+                        this.isRecording = false;
+                    }
+                },
+                initCharts() {
+                    // Progress Chart
+                    const progressCtx = document.getElementById('progressChart').getContext('2d');
+                    new Chart(progressCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Completed', 'In Progress', 'Not Started'],
+                            datasets: [{
+                                data: [65, 25, 10],
+                                backgroundColor: [
+                                    '#4285F4',
+                                    '#BB86FC',
+                                    '#1a1c2b'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        color: 'white'
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Engagement Chart
+                    const engagementCtx = document.getElementById('engagementChart').getContext('2d');
+                    new Chart(engagementCtx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                            datasets: [{
+                                label: 'Student Engagement',
+                                data: [75, 85, 70, 90, 85],
+                                borderColor: '#BB86FC',
+                                backgroundColor: 'rgba(187, 134, 252, 0.2)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.1)'
+                                    },
+                                    ticks: {
+                                        color: 'white'
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.1)'
+                                    },
+                                    ticks: {
+                                        color: 'white'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+                initBackgroundAnimation() {
+                    const scene = new THREE.Scene();
+                    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                    const renderer = new THREE.WebGLRenderer({ alpha: true });
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    document.getElementById('background-animation').appendChild(renderer.domElement);
+
+                    const geometry = new THREE.TorusKnotGeometry(10, 3, 100, 16);
+                    const material = new THREE.MeshBasicMaterial({ 
+                        color: 0x4285F4,
+                        wireframe: true,
+                        transparent: true,
+                        opacity: 0.1
+                    });
+                    const torusKnot = new THREE.Mesh(geometry, material);
+
+                    scene.add(torusKnot);
+                    camera.position.z = 30;
+
+                    function animate() {
+                        requestAnimationFrame(animate);
+                        torusKnot.rotation.x += 0.01;
+                        torusKnot.rotation.y += 0.01;
+                        renderer.render(scene, camera);
+                    }
+                    animate();
+
+                    window.addEventListener('resize', () => {
+                        const width = window.innerWidth;
+                        const height = window.innerHeight;
+                        renderer.setSize(width, height);
+                        camera.aspect = width / height;
+                        camera.updateProjectionMatrix();
+                    });
+                }
+            }
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
